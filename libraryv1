@@ -1,0 +1,280 @@
+local Library = {}
+
+local function create(inst, props)
+    local obj = Instance.new(inst)
+    for k,v in pairs(props) do obj[k] = v end
+    return obj
+end
+
+function Library.new()
+    local ScreenGui = create("ScreenGui", {Name="CustomUILib", ResetOnSpawn=false, Parent=game.CoreGui})
+    local MainFrame = create("Frame", {
+        Size=UDim2.new(0,550,0,380),
+        Position=UDim2.new(0.5,-275,0.5,-190),
+        BackgroundColor3=Color3.fromRGB(30,30,30),
+        BorderSizePixel=0,
+        Parent=ScreenGui
+    })
+
+    local TabBar = create("ScrollingFrame", {
+        Size=UDim2.new(1,0,0,40),
+        BackgroundColor3=Color3.fromRGB(20,20,20),
+        BorderSizePixel=0,
+        ScrollBarThickness=6,
+        CanvasSize=UDim2.new(0,0,0,0),
+        ScrollDirection=Enum.ScrollDirection.X,
+        Parent=MainFrame
+    })
+    local TabLayout = create("UIListLayout", {
+        FillDirection=Enum.FillDirection.Horizontal,
+        SortOrder=Enum.SortOrder.LayoutOrder,
+        Parent=TabBar
+    })
+
+    local Container = create("Frame", {
+        Size=UDim2.new(1,0,1,-40),
+        Position=UDim2.new(0,0,0,40),
+        BackgroundTransparency=1,
+        Parent=MainFrame
+    })
+
+    local UI = {}
+    local Tabs = {}
+    local SelectedTab = nil
+
+    function UI:AddTab(name, callback)
+        local btn = create("TextButton", {
+            Size=UDim2.new(0,120,1,0),
+            Text=name,
+            BackgroundColor3=Color3.fromRGB(40,40,40),
+            BorderSizePixel=0,
+            TextColor3=Color3.new(1,1,1),
+            Font=Enum.Font.Gotham,
+            TextSize=16,
+            Parent=TabBar
+        })
+
+        local frame = create("Frame", {
+            Size=UDim2.new(1,0,1,0),
+            BackgroundTransparency=1,
+            Visible=false,
+            Parent=Container
+        })
+
+        local Left = create("ScrollingFrame", {
+            Size=UDim2.new(0.5,-7,1,0),
+            Position=UDim2.new(0,0,0,0),
+            CanvasSize=UDim2.new(0,0,0,0),
+            ScrollBarThickness=6,
+            BackgroundColor3=Color3.fromRGB(25,25,25),
+            BorderSizePixel=0,
+            Parent=frame
+        })
+        local Right = create("ScrollingFrame", {
+            Size=UDim2.new(0.5,-7,1,0),
+            Position=UDim2.new(0.5,7,0,0),
+            CanvasSize=UDim2.new(0,0,0,0),
+            ScrollBarThickness=6,
+            BackgroundColor3=Color3.fromRGB(25,25,25),
+            BorderSizePixel=0,
+            Parent=frame
+        })
+
+        create("UIListLayout", {Parent=Left, Padding=UDim.new(0,6)})
+        create("UIListLayout", {Parent=Right, Padding=UDim.new(0,6)})
+
+        btn.MouseButton1Click:Connect(function()
+            if SelectedTab then SelectedTab.Visible = false end
+            frame.Visible = true
+            SelectedTab = frame
+        end)
+
+        if not SelectedTab then
+            SelectedTab = frame
+            frame.Visible = true
+        end
+
+        Tabs[name] = {Button=btn, Frame=frame, Left=Left, Right=Right}
+        callback(Left, Right)
+    end
+
+    function UI:AddTextLabel(parent, text)
+        create("TextLabel", {
+            Size=UDim2.new(1,-10,0,25),
+            Text=text,
+            BackgroundTransparency=1,
+            TextColor3=Color3.new(1,1,1),
+            Font=Enum.Font.Gotham,
+            TextSize=14,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            Parent=parent
+        })
+    end
+
+    function UI:AddToggle(parent, title, default, callback)
+        local btn = create("TextButton", {
+            Size=UDim2.new(1,-10,0,30),
+            Text=title,
+            BackgroundColor3=default and Color3.fromRGB(60,120,60) or Color3.fromRGB(50,50,50),
+            BorderSizePixel=0,
+            TextColor3=Color3.new(1,1,1),
+            Font=Enum.Font.Gotham,
+            TextSize=14,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            Parent=parent
+        })
+        local state = default
+        btn.MouseButton1Click:Connect(function()
+            state = not state
+            btn.BackgroundColor3 = state and Color3.fromRGB(60,120,60) or Color3.fromRGB(50,50,50)
+            callback(state)
+        end)
+    end
+
+    function UI:AddInput(parent, placeholder, callback)
+        local box = create("TextBox", {
+            Size=UDim2.new(1,-10,0,30),
+            PlaceholderText=placeholder,
+            Text="",
+            BackgroundColor3=Color3.fromRGB(50,50,50),
+            BorderSizePixel=0,
+            TextColor3=Color3.new(1,1,1),
+            Font=Enum.Font.Gotham,
+            TextSize=14,
+            ClearTextOnFocus=false,
+            Parent=parent
+        })
+        box.FocusLost:Connect(function(enterPressed)
+            if enterPressed then
+                callback(box.Text)
+            end
+        end)
+    end
+
+    function UI:AddDropdown(parent, default, options, callback)
+        local dropdown = create("TextButton", {
+            Size=UDim2.new(1,-10,0,30),
+            Text=default,
+            BackgroundColor3=Color3.fromRGB(50,50,50),
+            BorderSizePixel=0,
+            TextColor3=Color3.new(1,1,1),
+            Font=Enum.Font.Gotham,
+            TextSize=14,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            Parent=parent
+        })
+        local open = false
+        local list = create("Frame", {
+            Size=UDim2.new(1,-10,0,#options*25),
+            BackgroundColor3=Color3.fromRGB(40,40,40),
+            BorderSizePixel=0,
+            Visible=false,
+            Parent=parent
+        })
+        local layout = create("UIListLayout", {Parent=list})
+
+        for _,opt in ipairs(options) do
+            local optBtn = create("TextButton", {
+                Size=UDim2.new(1,0,0,25),
+                Text=opt,
+                BackgroundColor3=Color3.fromRGB(60,60,60),
+                BorderSizePixel=0,
+                TextColor3=Color3.new(1,1,1),
+                Font=Enum.Font.Gotham,
+                TextSize=14,
+                TextXAlignment=Enum.TextXAlignment.Left,
+                Parent=list
+            })
+            optBtn.MouseButton1Click:Connect(function()
+                dropdown.Text = opt
+                list.Visible = false
+                open = false
+                callback(opt)
+            end)
+        end
+
+        dropdown.MouseButton1Click:Connect(function()
+            open = not open
+            list.Visible = open
+        end)
+    end
+
+    function UI:AddSlider(parent, title, min, max, default, callback)
+        local frame = create("Frame", {
+            Size=UDim2.new(1,-10,0,40),
+            BackgroundColor3=Color3.fromRGB(50,50,50),
+            BorderSizePixel=0,
+            Parent=parent
+        })
+        local label = create("TextLabel", {
+            Size=UDim2.new(1,0,0,15),
+            Text=title..": "..default,
+            BackgroundTransparency=1,
+            TextColor3=Color3.new(1,1,1),
+            Font=Enum.Font.Gotham,
+            TextSize=13,
+            TextXAlignment=Enum.TextXAlignment.Left,
+            Parent=frame
+        })
+        local sliderBar = create("Frame", {
+            Size=UDim2.new(1,0,0,10),
+            Position=UDim2.new(0,0,0,25),
+            BackgroundColor3=Color3.fromRGB(30,30,30),
+            Parent=frame
+        })
+        local sliderFill = create("Frame", {
+            Size=UDim2.new((default-min)/(max-min),0,1,0),
+            BackgroundColor3=Color3.fromRGB(80,170,80),
+            Parent=sliderBar
+        })
+        local sliderBtn = create("TextButton", {
+            Size=UDim2.new(0,15,1,0),
+            BackgroundColor3=Color3.fromRGB(100,220,100),
+            BorderSizePixel=0,
+            Position=UDim2.new((default-min)/(max-min),-7,0,0),
+            Text="",
+            Parent=sliderBar
+        })
+
+        local dragging = false
+        sliderBtn.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+            end
+        end)
+        sliderBtn.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+        game:GetService("UserInputService").InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local mouseX = input.Position.X
+                local absPos = sliderBar.AbsolutePosition.X
+                local sizeX = sliderBar.AbsoluteSize.X
+                local pos = math.clamp(mouseX - absPos, 0, sizeX)
+                local percent = pos / sizeX
+                sliderFill.Size = UDim2.new(percent,0,1,0)
+                sliderBtn.Position = UDim2.new(percent,-7,0,0)
+                local value = math.floor(min + (max - min) * percent)
+                label.Text = title..": "..value
+                callback(value)
+            end
+        end)
+    end
+
+    function UI:ToggleVisible()
+        MainFrame.Visible = not MainFrame.Visible
+    end
+
+    local UserInputService = game:GetService("UserInputService")
+    UserInputService.InputBegan:Connect(function(input, gpe)
+        if not gpe and input.KeyCode == Enum.KeyCode.LeftControl then
+            UI:ToggleVisible()
+        end
+    end)
+
+    return UI
+end
+
+return Library
