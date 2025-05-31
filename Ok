@@ -1,0 +1,258 @@
+local UILib = {}
+UILib.__index = UILib
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
+
+function UILib.new()
+    local self = setmetatable({}, UILib)
+
+    self.ScreenGui = Instance.new("ScreenGui")
+    self.ScreenGui.Name = "ProUILib"
+    self.ScreenGui.Parent = PlayerGui
+
+    self.MainFrame = Instance.new("Frame")
+    self.MainFrame.Size = UDim2.new(0, 500, 0, 340)
+    self.MainFrame.Position = UDim2.new(0.5, -250, 0.5, -170)
+    self.MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    self.MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    self.MainFrame.Parent = self.ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 10)
+    UICorner.Parent = self.MainFrame
+
+    self.TabContainer = Instance.new("ScrollingFrame")
+    self.TabContainer.Size = UDim2.new(1, 0, 0, 40)
+    self.TabContainer.Position = UDim2.new(0, 0, 0, 0)
+    self.TabContainer.BackgroundTransparency = 1
+    self.TabContainer.ScrollBarThickness = 4
+    self.TabContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
+    self.TabContainer.HorizontalScrollBarInset = Enum.ScrollBarInset.Always
+    self.TabContainer.Parent = self.MainFrame
+
+    local TabListLayout = Instance.new("UIListLayout")
+    TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+    TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabListLayout.Padding = UDim.new(0, 8)
+    TabListLayout.Parent = self.TabContainer
+
+    self.PagesContainer = Instance.new("Frame")
+    self.PagesContainer.Size = UDim2.new(1, 0, 1, -40)
+    self.PagesContainer.Position = UDim2.new(0, 0, 0, 40)
+    self.PagesContainer.BackgroundTransparency = 1
+    self.PagesContainer.Parent = self.MainFrame
+
+    self.LeftPage = Instance.new("ScrollingFrame")
+    self.LeftPage.Size = UDim2.new(0.5, -10, 1, 0)
+    self.LeftPage.Position = UDim2.new(0, 10, 0, 0)
+    self.LeftPage.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    self.LeftPage.ScrollBarThickness = 6
+    self.LeftPage.Parent = self.PagesContainer
+
+    self.RightPage = Instance.new("ScrollingFrame")
+    self.RightPage.Size = UDim2.new(0.5, -10, 1, 0)
+    self.RightPage.Position = UDim2.new(0.5, 0, 0, 0)
+    self.RightPage.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    self.RightPage.ScrollBarThickness = 6
+    self.RightPage.Parent = self.PagesContainer
+
+    self.Tabs = {}
+    self.CurrentTab = nil
+
+    function self:AddTab(name)
+        local tabBtn = Instance.new("TextButton")
+        tabBtn.Text = name
+        tabBtn.Size = UDim2.new(0, 100, 1, 0)
+        tabBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        tabBtn.TextColor3 = Color3.new(1,1,1)
+        tabBtn.Parent = self.TabContainer
+
+        tabBtn.MouseButton1Click:Connect(function()
+            self:SwitchTab(name)
+        end)
+
+        self.Tabs[name] = {Button = tabBtn, LeftContent = {}, RightContent = {}}
+        if not self.CurrentTab then
+            self:SwitchTab(name)
+        end
+
+        return self.Tabs[name]
+    end
+
+    function self:SwitchTab(name)
+        if self.CurrentTab == name then return end
+        self.CurrentTab = name
+
+        self.LeftPage:ClearAllChildren()
+        self.RightPage:ClearAllChildren()
+
+        local tab = self.Tabs[name]
+        if not tab then return end
+
+        for _, obj in pairs(tab.LeftContent) do
+            obj.Parent = self.LeftPage
+        end
+        for _, obj in pairs(tab.RightContent) do
+            obj.Parent = self.RightPage
+        end
+
+        for _, t in pairs(self.Tabs) do
+            t.Button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        end
+        tab.Button.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    end
+
+    function self:AddToggle(tabName, text, callback, leftSide)
+        local tab = self.Tabs[tabName]
+        if not tab then return end
+
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(1, -20, 0, 30)
+        container.BackgroundTransparency = 1
+
+        local label = Instance.new("TextLabel")
+        label.Text = text
+        label.Size = UDim2.new(0.7, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.TextColor3 = Color3.new(1,1,1)
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = container
+
+        local toggleBtn = Instance.new("TextButton")
+        toggleBtn.Size = UDim2.new(0, 50, 0, 24)
+        toggleBtn.Position = UDim2.new(0.75, 0, 0.13, 0)
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+        toggleBtn.Text = "OFF"
+        toggleBtn.TextColor3 = Color3.new(1,1,1)
+        toggleBtn.Parent = container
+
+        local toggled = false
+        toggleBtn.MouseButton1Click:Connect(function()
+            toggled = not toggled
+            toggleBtn.Text = toggled and "ON" or "OFF"
+            if callback then
+                callback(toggled)
+            end
+        end)
+
+        if leftSide then
+            table.insert(tab.LeftContent, container)
+        else
+            table.insert(tab.RightContent, container)
+        end
+
+        if self.CurrentTab == tabName then
+            container.Parent = leftSide and self.LeftPage or self.RightPage
+        end
+
+        return container
+    end
+
+    function self:AddTextBox(tabName, placeholder, callback, leftSide)
+        local tab = self.Tabs[tabName]
+        if not tab then return end
+
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(1, -20, 0, 30)
+        container.BackgroundTransparency = 1
+
+        local box = Instance.new("TextBox")
+        box.PlaceholderText = placeholder
+        box.Size = UDim2.new(1, 0, 1, 0)
+        box.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        box.TextColor3 = Color3.new(1,1,1)
+        box.Parent = container
+
+        box.FocusLost:Connect(function(enterPressed)
+            if enterPressed and callback then
+                callback(box.Text)
+            end
+        end)
+
+        if leftSide then
+            table.insert(tab.LeftContent, container)
+        else
+            table.insert(tab.RightContent, container)
+        end
+
+        if self.CurrentTab == tabName then
+            container.Parent = leftSide and self.LeftPage or self.RightPage
+        end
+
+        return container
+    end
+
+    function self:AddDropdown(tabName, options, callback, leftSide)
+        local tab = self.Tabs[tabName]
+        if not tab then return end
+
+        local container = Instance.new("Frame")
+        container.Size = UDim2.new(1, -20, 0, 30)
+        container.BackgroundTransparency = 1
+
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 1, 0)
+        btn.Text = "Select"
+        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        btn.TextColor3 = Color3.new(1,1,1)
+        btn.Parent = container
+
+        local dropdown = Instance.new("Frame")
+        dropdown.Size = UDim2.new(1, 0, 0, 0)
+        dropdown.Position = UDim2.new(0, 0, 1, 0)
+        dropdown.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        dropdown.ClipsDescendants = true
+        dropdown.Parent = container
+
+        local uiList = Instance.new("UIListLayout")
+        uiList.Parent = dropdown
+        uiList.SortOrder = Enum.SortOrder.LayoutOrder
+
+        local expanded = false
+
+        btn.MouseButton1Click:Connect(function()
+            expanded = not expanded
+            if expanded then
+                dropdown:TweenSize(UDim2.new(1, 0, 0, #options * 30), "Out", "Quad", 0.3, true)
+            else
+                dropdown:TweenSize(UDim2.new(1, 0, 0, 0), "Out", "Quad", 0.3, true)
+            end
+        end)
+
+        for i, option in ipairs(options) do
+            local optionBtn = Instance.new("TextButton")
+            optionBtn.Size = UDim2.new(1, 0, 0, 30)
+            optionBtn.Text = option
+            optionBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            optionBtn.TextColor3 = Color3.new(1,1,1)
+            optionBtn.Parent = dropdown
+
+            optionBtn.MouseButton1Click:Connect(function()
+                btn.Text = option
+                if callback then
+                    callback(option)
+                end
+                expanded = false
+                dropdown:TweenSize(UDim2.new(1, 0, 0, 0), "Out", "Quad", 0.3, true)
+            end)
+        end
+
+        if leftSide then
+            table.insert(tab.LeftContent, container)
+        else
+            table.insert(tab.RightContent, container)
+        end
+
+        if self.CurrentTab == tabName then
+            container.Parent = leftSide and self.LeftPage or self.RightPage
+        end
+
+        return container
+    end
+
+    return self
+end
+
+return UILib
