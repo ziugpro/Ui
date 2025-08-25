@@ -1,4 +1,4 @@
-getgenv().Image = "rbxthumb://type=Asset&id=131484641795167&w=420&h=420"
+getgenv().Image = "rbxthumb://type=Asset&id=106019376492019&w=420&h=420"
 getgenv().ToggleUI = "RightControl"
 
 task.spawn(function()
